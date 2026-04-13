@@ -1099,17 +1099,24 @@ int mbedtls_pk_copy_public_from_psa(mbedtls_svc_key_id_t key_id,
  */
 static inline int pk_hashlen_helper(mbedtls_md_type_t md_alg, size_t *hash_len)
 {
-    if (*hash_len != 0) {
+    size_t expected_hash_len;
+
+    if (md_alg == MBEDTLS_MD_NONE) {
         return 0;
     }
 
-    *hash_len = mbedtls_md_get_size_from_type(md_alg);
+    expected_hash_len = mbedtls_md_get_size_from_type(md_alg);
 
-    if (*hash_len == 0) {
+    if (expected_hash_len == 0) {
         return -1;
     }
 
-    return 0;
+    if (*hash_len == 0) {
+        *hash_len = expected_hash_len;
+        return 0;
+    }
+
+    return (*hash_len == expected_hash_len) ? 0 : -1;
 }
 
 #if defined(MBEDTLS_ECP_RESTARTABLE)
