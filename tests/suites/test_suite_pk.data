@@ -1,6 +1,10 @@
 PK invalid parameters
 pk_invalid_param:
 
+PK verify rejects undersized ECDSA digest
+depends_on:PSA_HAVE_ALG_ECDSA_SIGN:PSA_HAVE_ALG_ECDSA_VERIFY:PSA_WANT_ALG_SHA_512:PSA_WANT_ECC_SECP_R1_256
+pk_verify_rejects_short_ecdsa_digest:
+
 PK valid parameters
 valid_parameters:
 

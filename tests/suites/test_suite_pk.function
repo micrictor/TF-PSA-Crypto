@@ -1366,7 +1366,7 @@ void pk_rsa_overflow()
 
     TEST_EQUAL(mbedtls_pk_verify(&pk, MBEDTLS_MD_NONE, hash, hash_len,
                                  sig, sig_len),
-               MBEDTLS_ERR_PK_BAD_INPUT_DATA);
+               MBEDTLS_ERR_PK_INVALID_ALG);
 
     TEST_EQUAL(mbedtls_pk_sign_ext(MBEDTLS_PK_SIGALG_RSA_PSS, &pk,
                                    MBEDTLS_MD_NONE, hash, hash_len,
@@ -1560,6 +1560,53 @@ void pk_sign_ext(int pk_type, int curve_or_keybits, int key_pk_type, int md_alg)
 
     TEST_EQUAL(mbedtls_pk_verify_ext(key_pk_type, &pk, md_alg,
                                      hash, hash_len, sig, sig_len), 0);
+exit:
+    mbedtls_pk_free(&pk);
+    PSA_DONE();
+}
+/* END_CASE */
+
+/* BEGIN_CASE depends_on:PSA_HAVE_ALG_ECDSA_SIGN:PSA_HAVE_ALG_ECDSA_VERIFY:PSA_WANT_ALG_SHA_512:PSA_WANT_ECC_SECP_R1_256 */
+void pk_verify_rejects_short_ecdsa_digest(void)
+{
+    mbedtls_pk_context pk;
+    unsigned char short_hash[1] = { 0x2a };
+    unsigned char raw_sig[PSA_SIGNATURE_MAX_SIZE];
+    unsigned char der_sig[MBEDTLS_PK_SIGNATURE_MAX_SIZE];
+    size_t raw_sig_len = 0;
+    size_t der_sig_len = 0;
+    psa_status_t status;
+
+    mbedtls_pk_init(&pk);
+    PSA_INIT();
+
+    TEST_EQUAL(pk_setup(&pk, MBEDTLS_PK_ECDSA, MBEDTLS_ECP_DP_SECP256R1), 0);
+
+    status = psa_sign_hash(pk.priv_id,
+                           MBEDTLS_PK_ALG_ECDSA(PSA_ALG_SHA_512),
+                           short_hash, sizeof(short_hash),
+                           raw_sig, sizeof(raw_sig), &raw_sig_len);
+    TEST_EQUAL(status, PSA_SUCCESS);
+
+    TEST_EQUAL(mbedtls_ecdsa_raw_to_der(mbedtls_pk_get_bitlen(&pk),
+                                        raw_sig, raw_sig_len,
+                                        der_sig, sizeof(der_sig),
+                                        &der_sig_len), 0);
+
+    TEST_EQUAL(mbedtls_pk_verify(&pk, MBEDTLS_MD_SHA512,
+                                 short_hash, sizeof(short_hash),
+                                 der_sig, der_sig_len),
+               MBEDTLS_ERR_PK_BAD_INPUT_DATA);
+    TEST_EQUAL(mbedtls_pk_verify_restartable(&pk, MBEDTLS_MD_SHA512,
+                                             short_hash, sizeof(short_hash),
+                                             der_sig, der_sig_len, NULL),
+               MBEDTLS_ERR_PK_BAD_INPUT_DATA);
+    TEST_EQUAL(mbedtls_pk_verify_ext(MBEDTLS_PK_SIGALG_ECDSA, &pk,
+                                     MBEDTLS_MD_SHA512,
+                                     short_hash, sizeof(short_hash),
+                                     der_sig, der_sig_len),
+               MBEDTLS_ERR_PK_BAD_INPUT_DATA);
+
 exit:
     mbedtls_pk_free(&pk);
     PSA_DONE();

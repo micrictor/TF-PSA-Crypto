@@ -1,0 +1,5 @@
+Security
+   * Reject mismatched digest lengths in `mbedtls_pk_verify()` and related
+     verification entry points. This prevents ECDSA verification from
+     accepting caller-supplied truncated digests when a specific hash
+     algorithm is declared.
